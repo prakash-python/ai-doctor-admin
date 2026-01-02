@@ -5,45 +5,53 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
+import { signIn } from "next-auth/react";
+
 
 export default function SignInPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-      });
+  const res = await signIn("credentials", {
+    redirect: false,
+    identifier,
+    password,
+  });
 
-      const data = await res.json();
+  if (!res?.ok) {
+    Swal.fire("Error", "Invalid credentials", "error");
+    return;
+  }
 
-      if (res.ok) {
-        // Store tokens
-        localStorage.setItem("accessToken", data.data.accessToken);
-        localStorage.setItem("refreshToken", data.data.refreshToken);
-
-        // Redirect based on role
-        const role = data.data.user.role;
-        if (role === "admin") {
-          router.push("/admin/dashboard");
-        } else if (role === "doctor") {
-          router.push("/doctor/dashboard");
-        } else {
-          router.push("/user/dashboard"); // Default user dashboard
-        }
-      } else {
-        Swal.fire("Error", data.message || "Login failed", "error");
-      }
-    } catch (err) {
-      Swal.fire("Error", "Something went wrong", "error");
+  // Wait for session to be ready
+  const waitForSession = async () => {
+    for (let i = 0; i < 10; i++) {
+      const s = await fetch("/api/auth/session");
+      const session = await s.json();
+      if (session?.user?.role) return session;
+      await new Promise(r => setTimeout(r, 200));
     }
+    return null;
   };
+
+  const session = await waitForSession();
+  if (!session) {
+    Swal.fire("Error", "Session not ready. Try again.", "error");
+    return;
+  }
+
+  const role = session.user.role;
+
+  if (role === "admin") router.replace("/admin/dashboard");
+  else if (role === "doctor") router.replace("/doctor/dashboard");
+  else if (role === "health_advisor") router.replace("/advisor/dashboard");
+  else if (role === "patient") router.replace("/patient/dashboard");
+  else router.replace("/user/dashboard");
+};
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">

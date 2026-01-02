@@ -1,192 +1,119 @@
-// app/api/users/[id]/route.ts
-
 import { prisma } from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { guard } from "@/app/lib/apiGuard";
+import { requireRole } from "@/app/lib/requireRole";
 
 /* ================================
-   GET /api/users/[id] - Get user by ID
+   GET /api/admin/users/[id]
 ================================ */
-export async function GET(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
+export const GET = guard(async (
+  _req: Request,
+  ctx: { params: { id: string } }
+) => {
+  await requireRole("admin");
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        mobile: true,
-        createdAt: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-      },
-    });
+  const id = ctx.params.id;
 
-    if (!user) {
-      return NextResponse.json(
-        { status: "error", message: "User not found" },
-        { status: 404 }
-      );
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      mobile: true,
+      createdAt: true,
+      role: { select: { id: true, name: true, description: true } }
     }
+  });
 
-    return NextResponse.json({
-      status: "success",
-      data: user,
-    });
-  } catch (err) {
-    console.error("GET /api/users/[id] error:", err);
-    return NextResponse.json(
-      { status: "error", message: "Invalid user ID or server error" },
-      { status: 400 }
-    );
-  }
-}
+  if (!user)
+    return NextResponse.json({ message: "User not found" }, { status: 404 });
+
+  return NextResponse.json(user);
+});
 
 /* ================================
-   PUT /api/users/[id] - Update user
+   PUT /api/admin/users/[id]
 ================================ */
-export async function PUT(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
+export const PUT = guard(async (req: Request, ctx: any) => {
+  await requireRole("admin");
 
-  try {
-    const body = await req.json();
-    const { email, mobile, password, roleId } = body;
+  const { id } = await ctx.params;   // <-- FIX
 
-    // Build update data dynamically
-    const updateData: any = {};
+  const existingUser = await prisma.user.findUnique({ where: { id } });
+  if (!existingUser)
+    return NextResponse.json({ message: "User not found" }, { status: 404 });
 
-    if (email !== undefined) {
-      // Allow clearing email (set to null)
-      if (email === null || email === "") {
-        updateData.email = null;
-      } else {
-        // Check if email is already used by another user
-        const existingEmail = await prisma.user.findFirst({
-          where: { email, NOT: { id } },
-        });
-        if (existingEmail) {
-          return NextResponse.json(
-            { status: "error", message: "Email already in use by another user" },
-            { status: 400 }
-          );
-        }
-        updateData.email = email;
-      }
+  const { email, mobile, password, roleId } = await req.json();
+
+  const data: any = {};
+
+  /* EMAIL */
+  if (typeof email !== "undefined") {
+    if (email === "" || email === null) {
+      data.email = null;
+    } else if (email !== existingUser.email) {
+      const exists = await prisma.user.findUnique({ where: { email } });
+      if (exists)
+        return NextResponse.json({ message: "Email already used" }, { status: 400 });
+      data.email = email;
     }
-
-    if (mobile !== undefined) {
-      if (!mobile) {
-        return NextResponse.json(
-          { status: "error", message: "Mobile number is required" },
-          { status: 400 }
-        );
-      }
-      // Check if mobile is already used by another user
-      const existingMobile = await prisma.user.findFirst({
-        where: { mobile, NOT: { id } },
-      });
-      if (existingMobile) {
-        return NextResponse.json(
-          { status: "error", message: "Mobile number already in use" },
-          { status: 400 }
-        );
-      }
-      updateData.mobile = mobile;
-    }
-
-    if (roleId !== undefined) {
-      // Validate role exists
-      const roleExists = await prisma.role.findUnique({
-        where: { id: roleId },
-      });
-      if (!roleExists) {
-        return NextResponse.json(
-          { status: "error", message: "Invalid role ID" },
-          { status: 400 }
-        );
-      }
-      updateData.roleId = roleId;
-    }
-
-    if (password !== undefined && password !== "") {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
-
-    // If no fields to update
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { status: "error", message: "No valid fields provided to update" },
-        { status: 400 }
-      );
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        mobile: true,
-        createdAt: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json({
-      status: "success",
-      message: "User updated successfully",
-      data: updatedUser,
-    });
-  } catch (err) {
-    console.error("PUT /api/users/[id] error:", err);
-    return NextResponse.json(
-      { status: "error", message: "User not found or invalid data" },
-      { status: 400 }
-    );
   }
-}
+
+  /* MOBILE */
+  if (typeof mobile !== "undefined") {
+    if (!mobile)
+      return NextResponse.json({ message: "Mobile required" }, { status: 400 });
+
+    if (mobile !== existingUser.mobile) {
+      const exists = await prisma.user.findUnique({ where: { mobile } });
+      if (exists)
+        return NextResponse.json({ message: "Mobile already used" }, { status: 400 });
+      data.mobile = mobile;
+    }
+  }
+
+  if (password) data.password = await bcrypt.hash(password, 10);
+
+  if (roleId !== undefined) {
+    const role = await prisma.role.findUnique({ where: { id: roleId } });
+    if (!role)
+      return NextResponse.json({ message: "Invalid role" }, { status: 400 });
+    data.roleId = roleId;
+  }
+
+  if (Object.keys(data).length === 0)
+    return NextResponse.json({ message: "No valid changes" }, { status: 400 });
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      email: true,
+      mobile: true,
+      createdAt: true,
+      role: { select: { id: true, name: true, description: true } }
+    }
+  });
+
+  return NextResponse.json({ message: "User updated", data: updated });
+});
+
+
 
 /* ================================
-   DELETE /api/users/[id] - Delete user
+   DELETE /api/admin/users/[id]
 ================================ */
-export async function DELETE(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
+export const DELETE = guard(async (_req: Request, ctx: any) => {
+  await requireRole("admin");
 
-  try {
-    await prisma.user.delete({
-      where: { id },
-    });
+  const { id } = await ctx.params;   // ← REQUIRED
 
-    return NextResponse.json({
-      status: "success",
-      message: "User deleted successfully",
-    });
-  } catch (err) {
-    console.error("DELETE /api/users/[id] error:", err);
-    return NextResponse.json(
-      { status: "error", message: "User not found or cannot be deleted" },
-      { status: 404 }
-    );
-  }
-}
+  if (!id)
+    return NextResponse.json({ message: "Missing user id" }, { status: 400 });
+
+  await prisma.user.delete({ where: { id } });
+
+  return NextResponse.json({ message: "User deleted" });
+});

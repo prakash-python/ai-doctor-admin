@@ -1,106 +1,57 @@
-// app/api/roles/route.ts
-
 import { prisma } from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { guard } from "@/app/lib/apiGuard";
+import { requireRole } from "@/app/lib/requireRole";
 
 /* ================================
-   GET /api/roles - Get all roles
+   GET /api/roles  (ADMIN ONLY)
 ================================ */
-export async function GET() {
-  try {
-    const roles = await prisma.role.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-        _count: {
-          select: { users: true }, // Optional: count how many users have this role
-        },
-      },
-    });
+export const GET = guard(async () => {
+  await requireRole("admin");
 
-    return NextResponse.json({
-      status: "success",
-      total: roles.length,
-      data: roles,
-    });
-  } catch (err) {
-    console.error("GET /api/roles error:", err);
-    return NextResponse.json(
-      { status: "error", message: "Failed to fetch roles" },
-      { status: 500 }
-    );
-  }
-}
+  const roles = await prisma.role.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      createdAt: true,
+      _count: { select: { users: true } },
+    },
+  });
+
+  return NextResponse.json({
+    status: "success",
+    total: roles.length,
+    data: roles,
+  });
+});
 
 /* ================================
-   POST /api/roles - Create new role
+   POST /api/roles  (ADMIN ONLY)
 ================================ */
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { name, description } = body;
+export const POST = guard(async (req: Request) => {
+  await requireRole("admin");
 
-    if (!name || name.trim() === "") {
-      return NextResponse.json(
-        { status: "error", message: "Role name is required" },
-        { status: 400 }
-      );
-    }
+  const body = await req.json();
+  const { name, description } = body;
 
-    const normalizedName = name.trim().toLowerCase();
-
-    // Check if role with same name already exists (case-insensitive)
-    const existingRole = await prisma.role.findFirst({
-      where: {
-        name: {
-          equals: normalizedName,
-          mode: "insensitive",
-        },
-      },
-    });
-
-    if (existingRole) {
-      return NextResponse.json(
-        { status: "error", message: "Role with this name already exists" },
-        { status: 400 }
-      );
-    }
-
-    const role = await prisma.role.create({
-      data: {
-        name: normalizedName,
-        description: description?.trim() || null,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-      },
-    });
-
-    return NextResponse.json(
-      {
-        status: "success",
-        message: "Role created successfully",
-        data: role,
-      },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    console.error("POST /api/roles error:", err);
-    if (err.code === "P2002") {
-      return NextResponse.json(
-        { status: "error", message: "Role name must be unique" },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { status: "error", message: "Internal server error" },
-      { status: 500 }
-    );
+  if (!name || !name.trim()) {
+    return NextResponse.json({ message: "Role name required" }, { status: 400 });
   }
-}
+
+  const normalizedName = name.trim().toLowerCase();
+
+  const exists = await prisma.role.findFirst({
+    where: { name: { equals: normalizedName, mode: "insensitive" } },
+  });
+
+  if (exists)
+    return NextResponse.json({ message: "Role already exists" }, { status: 400 });
+
+  const role = await prisma.role.create({
+    data: { name: normalizedName, description: description?.trim() || null },
+  });
+
+  return NextResponse.json({ status: "success", data: role }, { status: 201 });
+});

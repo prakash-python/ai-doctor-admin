@@ -1,151 +1,85 @@
 import { prisma } from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { guard } from "@/app/lib/apiGuard";
+import { requireRole } from "@/app/lib/requireRole";
 
 /* ============================
-   GET /api/users - Fetch all users with role details
+   GET /api/admin/users
 ============================ */
-export async function GET() {
-  try {
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        mobile: true,
-        createdAt: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-      },
-    });
+export const GET = guard(async () => {
+  await requireRole("admin");
 
-    return NextResponse.json({
-      status: "success",
-      total: users.length,
-      data: users,
-    });
-  } catch (err) {
-    console.error("GET /api/users error:", err);
-    return NextResponse.json(
-      { status: "error", message: "Failed to fetch users" },
-      { status: 500 }
-    );
-  }
-}
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      email: true,
+      mobile: true,
+      createdAt: true,
+      role: {
+        select: { id: true, name: true, description: true }
+      }
+    }
+  });
+
+  return NextResponse.json({
+    status: "success",
+    total: users.length,
+    data: users
+  });
+});
+
 
 /* ============================
-   POST /api/users - Create new user
+   POST /api/admin/users
 ============================ */
-export async function POST(req: Request) {
-  console.log("POST /api/users called");
+export const POST = guard(async (req: Request) => {
+  await requireRole("admin");
 
-  try {
-    const body = await req.json();
-    const { email, mobile, password, roleId } = body;
+  const { email, mobile, password, roleId } = await req.json();
 
-    // Validation
-    if (!email && !mobile) {
-      return NextResponse.json(
-        { status: "error", message: "Either email or mobile is required" },
-        { status: 400 }
-      );
-    }
+  if (!email && !mobile)
+    return NextResponse.json({ message: "Email or mobile required" }, { status: 400 });
 
-    if (!password) {
-      return NextResponse.json(
-        { status: "error", message: "Password is required" },
-        { status: 400 }
-      );
-    }
+  if (!password)
+    return NextResponse.json({ message: "Password required" }, { status: 400 });
 
-    if (!roleId) {
-      return NextResponse.json(
-        { status: "error", message: "Role ID is required" },
-        { status: 400 }
-      );
-    }
+  if (!roleId)
+    return NextResponse.json({ message: "Role is required" }, { status: 400 });
 
-    // Check if role exists
-    const roleExists = await prisma.role.findUnique({
-      where: { id: roleId },
-    });
+  const role = await prisma.role.findUnique({ where: { id: roleId } });
+  if (!role)
+    return NextResponse.json({ message: "Invalid role" }, { status: 400 });
 
-    if (!roleExists) {
-      return NextResponse.json(
-        { status: "error", message: "Invalid role ID" },
-        { status: 400 }
-      );
-    }
-
-    // Check for duplicates
-    if (email) {
-      const existingEmail = await prisma.user.findUnique({
-        where: { email },
-      });
-      if (existingEmail) {
-        return NextResponse.json(
-          { status: "error", message: "Email already in use" },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (mobile) {
-      const existingMobile = await prisma.user.findUnique({
-        where: { mobile },
-      });
-      if (existingMobile) {
-        return NextResponse.json(
-          { status: "error", message: "Mobile number already in use" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email: email || null, // optional, can be null
-        mobile,
-        password: hashedPassword,
-        roleId,
-      },
-      select: {
-        id: true,
-        email: true,
-        mobile: true,
-        createdAt: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(
-      {
-        status: "success",
-        message: "User created successfully",
-        data: user,
-      },
-      { status: 201 }
-    );
-  } catch (err) {
-    console.error("POST /api/users error:", err);
-    return NextResponse.json(
-      { status: "error", message: "Internal server error" },
-      { status: 500 }
-    );
+  if (email) {
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists)
+      return NextResponse.json({ message: "Email already exists" }, { status: 400 });
   }
-}
+
+  if (mobile) {
+    const exists = await prisma.user.findUnique({ where: { mobile } });
+    if (exists)
+      return NextResponse.json({ message: "Mobile already exists" }, { status: 400 });
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: { email: email || null, mobile, password: hashed, roleId },
+    select: {
+      id: true,
+      email: true,
+      mobile: true,
+      createdAt: true,
+      role: { select: { id: true, name: true, description: true } }
+    }
+  });
+
+  return NextResponse.json({
+    status: "success",
+    message: "User created",
+    data: user
+  }, { status: 201 });
+});
