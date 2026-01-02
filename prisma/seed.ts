@@ -9,8 +9,8 @@ async function main() {
     data: [
       { name: "admin" },
       { name: "doctor" },
-      { name: "staff" },
-      { name: "nurse" }
+      { name: "health_advisor" },
+      { name: "patient" }
     ],
     skipDuplicates: true
   });

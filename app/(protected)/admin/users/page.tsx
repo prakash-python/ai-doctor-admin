@@ -13,7 +13,7 @@ type Role = {
 
 type User = {
   id: string;
-  email: string | null;        // email can be null now
+  email: string | null;
   mobile: string;
   createdAt: string;
   role: {
@@ -37,10 +37,10 @@ export default function UsersPage() {
     email: "",
     mobile: "",
     password: "",
-    roleId: "", // Now using roleId (string)
+    roleId: "",
   });
 
-  // Fetch roles from new /api/admin/roles
+  // Fetch roles
   const fetchRoles = async () => {
     try {
       const res = await fetch("/api/admin/roles");
@@ -53,7 +53,7 @@ export default function UsersPage() {
     }
   };
 
-  // Fetch users (assuming /api/admin/users returns nested role)
+  // Fetch users
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -97,6 +97,12 @@ export default function UsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Mobile validation: must be exactly 10 digits
+    if (formData.mobile.length !== 10) {
+      Swal.fire("Error", "Mobile number must be exactly 10 digits", "error");
+      return;
+    }
 
     if (!formData.roleId) {
       Swal.fire("Error", "Please select a role", "error");
@@ -154,7 +160,7 @@ export default function UsersPage() {
     }
   };
 
-  // Search filter (by email or mobile)
+  // Search filter
   const filteredUsers = users.filter((user) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -169,6 +175,9 @@ export default function UsersPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const isMobileValid = formData.mobile.length === 10;
+  const isMobileInvalid = formData.mobile.length > 0 && formData.mobile.length !== 10;
 
   return (
     <div className="space-y-8">
@@ -360,14 +369,37 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
 
-              <input
-                type="text"
-                required={!editId} // Required only on create
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition"
-                placeholder="Mobile number"
-                value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-              />
+              {/* Mobile Field with Validation */}
+              <div className="space-y-1">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  required={!editId}
+                  className={`w-full px-5 py-4 bg-gray-50 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 transition ${
+                    isMobileInvalid
+                      ? "border-red-400 focus:border-red-400"
+                      : "border-gray-200 focus:border-purple-400"
+                  }`}
+                  placeholder="Mobile number (10 digits)"
+                  value={formData.mobile}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, "");
+                    if (value.length <= 10) {
+                      setFormData({ ...formData, mobile: value });
+                    }
+                  }}
+                />
+                {isMobileInvalid && (
+                  <p className="text-sm text-red-600 px-2">
+                    Mobile number must be exactly 10 digits ({formData.mobile.length}/10)
+                  </p>
+                )}
+                {isMobileValid && (
+                  <p className="text-sm text-green-600 px-2">Valid mobile number ✓</p>
+                )}
+              </div>
 
               <input
                 type="password"

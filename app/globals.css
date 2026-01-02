@@ -62,3 +62,10 @@ body {
   border-radius: 18px;
   box-shadow: 0 25px 50px rgba(0,0,0,.15);
 }
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none !important;
+}
