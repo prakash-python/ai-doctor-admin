@@ -1,5 +1,3 @@
-// app/api/auth/[...nextauth]/route.ts (or .js)
-
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
@@ -8,49 +6,16 @@ import { prisma } from "@/app/lib/prisma";
 import bcrypt from "bcryptjs";
 import type { AuthOptions } from "next-auth";
 
-const adapter = PrismaAdapter(prisma);
-
-// Custom adapter to auto-assign "patient" role on user creation (OAuth signups)
-const customAdapter = {
-  ...adapter,
-  async createUser(profile: any) {
-    // Find the "patient" role – throw if not found (safety)
-    const patientRole = await prisma.role.findUnique({
-      where: { name: "patient" },
-    });
-
-    if (!patientRole) {
-      throw new Error('Default role "patient" not found in database');
-    }
-
-    // Create user with connected patient role
-    return prisma.user.create({
-      data: {
-        name: profile.name,
-        email: profile.email,
-        image: profile.image,
-        emailVerified: profile.emailVerified ? new Date(profile.emailVerified) : null,
-        // Connect the patient role
-        role: {
-          connect: { id: patientRole.id },
-        },
-      },
-    });
-  },
-};
-
 export const authOptions: AuthOptions = {
-  adapter: customAdapter, // ← Use custom adapter
+  adapter: PrismaAdapter(prisma),
 
   providers: [
-    // Google OAuth
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
     }),
 
-    // Credentials (Email/Mobile + Password)
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -76,31 +41,25 @@ export const authOptions: AuthOptions = {
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
 
-        return {
-    id: user.id,                    // requireda
-    email: user.email ?? null,      // can be null
-    name: user.name ?? null,        // can be null
-    image: user.image ?? null,      // optional, but good to include
-    role: user.role.name,           // your custom field
-  };
+        return user;
       },
     }),
   ],
 
-  session: {
-    strategy: "jwt",
-    maxAge: 60 * 60 * 8, // 8 hours
-  },
-
-  jwt: {
-    maxAge: 60 * 60 * 8,
-  },
+  session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
+  jwt: { maxAge: 60 * 60 * 8 },
 
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { password: true, role: { select: { name: true } } }
+        });
+
+        token.id = user.id;
+        token.role = dbUser?.role?.name;
+        token.hasPassword = !!dbUser?.password;
       }
       return token;
     },
@@ -109,6 +68,7 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.hasPassword = token.hasPassword as boolean;
       }
       return session;
     },
@@ -118,15 +78,24 @@ export const authOptions: AuthOptions = {
     },
   },
 
-  // Removed events.createUser – now handled in custom adapter
+  events: {
+    async createUser({ user }) {
+      const patientRole = await prisma.role.findUnique({
+        where: { name: "patient" },
+      });
 
-  pages: {
-    signIn: "/sign-in",
+      if (patientRole) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { roleId: patientRole.id },
+        });
+      }
+    },
   },
 
+  pages: { signIn: "/sign-in" },
   secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

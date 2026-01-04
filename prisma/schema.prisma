@@ -23,7 +23,7 @@ model User {
   image         String?
   mobile        String?   @unique
   password      String?   // Optional – only for credentials users
-  roleId        String    // Required foreign key
+  roleId        String    @default("ddab2b1b-b560-4ed2-a612-99bfd9ccae85")  
   createdAt     DateTime  @default(now())
 
   role          Role      @relation(fields: [roleId], references: [id])
