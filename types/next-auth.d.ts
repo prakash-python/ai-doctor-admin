@@ -9,6 +9,7 @@ declare module "next-auth" {
       role: string;
       sessionId: string;
       email?: string | null;
+      hasPassword: Boolean;
     } & DefaultSession["user"];
   }
 
@@ -17,6 +18,7 @@ declare module "next-auth" {
     role: string;
     email: string;
     sessionId: string;
+    hasPassword: Boolean;
   }
 }
 
@@ -25,5 +27,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     sid: string;
+    hasPassword: Boolean;
   }
 }

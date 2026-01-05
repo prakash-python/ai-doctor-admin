@@ -4,14 +4,12 @@ import { redirect } from "next/navigation";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
+  if (!session) redirect("/sign-in");
 
-  if (!session) {
-    redirect("/sign-in");
-  }
+
+  if (!session.user.hasPassword) redirect("/set-password");
 
   const role = session.user.role;
-
-  console.log('role in dashboard rendering',role)
 
   if (role === "admin") redirect("/admin/dashboard");
   if (role === "doctor") redirect("/doctor/dashboard");
