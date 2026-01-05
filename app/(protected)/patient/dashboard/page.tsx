@@ -2,27 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Calendar, ClipboardList, Activity } from "lucide-react";
+import { Calendar, ClipboardList, FileText, User } from "lucide-react";
 
-type DoctorDashboard = {
+type PatientDashboard = {
   user: {
     email: string | null;
     mobile: string;
-    role: { name: string };
     createdAt: string;
   };
   stats: {
-    totalPatients: number;
     totalAppointments: number;
+    totalPrescriptions: number;
     totalConsultations: number;
   };
 };
 
-export default function DoctorDashboard() {
-  const [data, setData] = useState<DoctorDashboard | null>(null);
+export default function PatientDashboard() {
+  const [data, setData] = useState<PatientDashboard | null>(null);
 
   useEffect(() => {
-    fetch("/api/doctor/dashboard")
+    fetch("/api/patient/dashboard")
       .then(res => res.json())
       .then(setData);
   }, []);
@@ -35,18 +34,18 @@ export default function DoctorDashboard() {
 
       {/* HEADER */}
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-          Welcome Dr. {user?.email || user?.mobile || "Doctor"}!
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          Welcome {user?.email || user?.mobile || "Patient"} 👋
         </h1>
         <p className="text-gray-600 mt-2 text-lg">
-          Here is your daily clinical overview.
+          Here is your health overview.
         </p>
       </div>
 
       {/* STAT CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Stat title="My Patients" value={stats?.totalPatients} icon={<Users />} color="green" />
-        <Stat title="Appointments" value={stats?.totalAppointments} icon={<Calendar />} color="blue" />
+        <Stat title="My Appointments" value={stats?.totalAppointments} icon={<Calendar />} color="blue" />
+        <Stat title="Prescriptions" value={stats?.totalPrescriptions} icon={<FileText />} color="green" />
         <Stat title="Consultations" value={stats?.totalConsultations} icon={<ClipboardList />} color="purple" />
       </div>
 
@@ -54,11 +53,11 @@ export default function DoctorDashboard() {
 
         {/* QUICK ACTIONS */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h3 className="text-xl font-semibold mb-6">Doctor Actions</h3>
+          <h3 className="text-xl font-semibold mb-6">Quick Actions</h3>
           <div className="space-y-4">
-            <ActionLink href="/doctor/patients" icon={<Users className="text-green-600" />} label="My Patients" />
-            <ActionLink href="/doctor/appointments" icon={<Calendar className="text-blue-600" />} label="Appointments" />
-            <ActionLink href="/doctor/consultations" icon={<ClipboardList className="text-purple-600" />} label="Consultations" />
+            <ActionLink href="/patient/appointments" icon={<Calendar className="text-blue-600" />} label="Appointments" />
+            <ActionLink href="/patient/prescriptions" icon={<FileText className="text-green-600" />} label="Prescriptions" />
+            <ActionLink href="/patient/consultations" icon={<ClipboardList className="text-purple-600" />} label="Consultations" />
           </div>
         </div>
 
@@ -67,7 +66,7 @@ export default function DoctorDashboard() {
           <h3 className="text-xl font-semibold mb-6">My Profile</h3>
           <Info label="Email" value={user?.email} />
           <Info label="Mobile" value={user?.mobile} />
-          <Info label="Role" value="Doctor" />
+          <Info label="Role" value="Patient" />
           <Info label="Member Since" value={user?.createdAt && new Date(user.createdAt).toLocaleDateString()} />
         </div>
 

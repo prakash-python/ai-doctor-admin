@@ -3,12 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export function guard(handler: Function) {
-  return async (req: Request, context?: any) => {
+  return async (req: Request, ctx: any) => {
     try {
       const session = await getServerSession(authOptions);
       if (!session) throw new Error("NOT_AUTHENTICATED");
 
-      return await handler(req, session, context);
+      
+      ctx.session = session;
+
+      return await handler(req, ctx);   // ← keep original signature
     } catch (e: any) {
       if (e.message === "NOT_AUTHENTICATED")
         return NextResponse.json({ message: "Login required" }, { status: 401 });

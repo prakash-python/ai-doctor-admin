@@ -84,25 +84,34 @@ model VerificationToken {
 
 
 model Doctor {
-  id          String   @id @default(cuid())
-  userId      String   @unique
+  id            String   @id @default(cuid())
+  userId        String   @unique
+
+  // 🔹 Profile Identity
+  name          String
+  profileImage  String?
+
   specialization String
   qualification String
-  experience   Int
-  available    Boolean @default(true)
+  experience    Int
+  available     Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments Appointment[]
   prescriptions Prescription[]
 }
 
-
 model Patient {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  bloodGroup String?
-  age       Int
-  gender    String
+  id            String   @id @default(cuid())
+  userId        String   @unique
+
+  // 🔹 Profile Identity
+  name          String
+  profileImage  String?
+
+  bloodGroup    String?
+  age           Int
+  gender        String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments Appointment[]
@@ -138,8 +147,13 @@ model Prescription {
 
 
 model HealthAdvisor {
-  id           String   @id @default(cuid())
-  userId       String   @unique
+  id            String   @id @default(cuid())
+  userId        String   @unique
+
+  // 🔹 Profile Identity
+  name          String
+  profileImage  String?   // URL of image
+
   specialization String   // Ayurveda, Nutrition, Yoga, Psychology, etc
   qualification String
   experience    Int
@@ -149,6 +163,7 @@ model HealthAdvisor {
   patients Patient[]
   consultations Consultation[]
 }
+
 
 
 model Consultation {

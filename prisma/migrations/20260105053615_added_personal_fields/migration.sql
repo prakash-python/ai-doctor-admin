@@ -1,0 +1,19 @@
+/*
+  Warnings:
+
+  - Added the required column `name` to the `Doctor` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `name` to the `HealthAdvisor` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `name` to the `Patient` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- AlterTable
+ALTER TABLE "Doctor" ADD COLUMN     "name" TEXT NOT NULL,
+ADD COLUMN     "profileImage" TEXT;
+
+-- AlterTable
+ALTER TABLE "HealthAdvisor" ADD COLUMN     "name" TEXT NOT NULL,
+ADD COLUMN     "profileImage" TEXT;
+
+-- AlterTable
+ALTER TABLE "Patient" ADD COLUMN     "name" TEXT NOT NULL,
+ADD COLUMN     "profileImage" TEXT;
