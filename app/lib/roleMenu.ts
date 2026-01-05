@@ -2,6 +2,7 @@ export const roleMenus = {
   admin: [
     { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/users", label: "Users" },
+    { href: "/admin/staff", label: "Staff" },
     { href: "/admin/roles", label: "Roles" },
     { href: "/admin/patients", label: "Patients" }
   ],

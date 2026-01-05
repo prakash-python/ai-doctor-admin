@@ -13,7 +13,9 @@ export const GET = guard(async (
 ) => {
   await requireRole("admin");
 
-  const id = ctx.params.id;
+  
+  const { id } = ctx.params as { id: string };
+
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -38,7 +40,9 @@ export const GET = guard(async (
 export const PUT = guard(async (req: Request, ctx: any) => {
   await requireRole("admin");
 
-  const { id } = await ctx.params;   // <-- FIX
+  
+  const { id } = ctx.params as { id: string };
+
 
   const existingUser = await prisma.user.findUnique({ where: { id } });
   if (!existingUser)
@@ -108,7 +112,7 @@ export const PUT = guard(async (req: Request, ctx: any) => {
 export const DELETE = guard(async (_req: Request, ctx: any) => {
   await requireRole("admin");
 
-  const { id } = await ctx.params;   // ← REQUIRED
+  const { id } = ctx.params as { id: string };
 
   if (!id)
     return NextResponse.json({ message: "Missing user id" }, { status: 400 });

@@ -13,7 +13,7 @@ export async function GET() {
 
   if (role === "admin") redirect("/admin/dashboard");
   if (role === "doctor") redirect("/doctor/dashboard");
-  if (role === "health_advisor") redirect("/advisor/dashboard");
+  if (role === "health_advisor") redirect("/health_advisor/dashboard");
   if (role === "patient") redirect("/patient/dashboard");
 
   redirect("/user/dashboard");

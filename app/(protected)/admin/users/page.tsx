@@ -38,6 +38,18 @@ export default function UsersPage() {
     mobile: "",
     password: "",
     roleId: "",
+    name: "",
+
+    // doctor/advisor
+    specialization: "",
+    qualification: "",
+    experience: "",
+    available: true,
+
+    // patient
+    bloodGroup: "",
+    age: "",
+    gender: "",
   });
 
   // Fetch roles
@@ -80,6 +92,14 @@ export default function UsersPage() {
       mobile: "",
       password: "",
       roleId: roles[0]?.id || "",
+      name: "",
+      specialization: "",
+      qualification: "",
+      experience: "",
+      available: true,
+      bloodGroup: "",
+      age: "",
+      gender: "",
     });
     setShowModal(true);
   };
@@ -91,6 +111,14 @@ export default function UsersPage() {
       mobile: user.mobile,
       password: "",
       roleId: user.role.id,
+      name: "",
+      specialization: "",
+      qualification: "",
+      experience: "",
+      available: true,
+      bloodGroup: "",
+      age: "",
+      gender: "",
     });
     setShowModal(true);
   };
@@ -113,10 +141,26 @@ export default function UsersPage() {
       email: formData.email || null,
       mobile: formData.mobile,
       roleId: formData.roleId,
+      name: formData.name || null,
     };
 
-    if (formData.password) {
-      payload.password = formData.password;
+    if (formData.password) payload.password = formData.password;
+
+    // role specific
+    if (formData.roleId) {
+      const selRole = roles.find((r) => r.id === formData.roleId)?.name;
+      if (selRole === "doctor" || selRole === "health_advisor") {
+        payload.specialization = formData.specialization;
+        payload.qualification = formData.qualification;
+        payload.experience = Number(formData.experience || 0);
+        payload.available = !!formData.available;
+      }
+
+      if (selRole === "patient") {
+        payload.bloodGroup = formData.bloodGroup || null;
+        payload.age = Number(formData.age || 0);
+        payload.gender = formData.gender;
+      }
     }
 
     const url = editId ? `/api/admin/users/${editId}` : "/api/admin/users";
@@ -267,13 +311,12 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white ${
-                          user.role.name === "admin"
-                            ? "bg-red-500"
-                            : user.role.name === "staff"
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white ${user.role.name === "admin"
+                          ? "bg-red-500"
+                          : user.role.name === "staff"
                             ? "bg-green-500"
                             : "bg-blue-500"
-                        }`}
+                          }`}
                       >
                         {user.role.name.toUpperCase()}
                       </span>
@@ -330,11 +373,10 @@ export default function UsersPage() {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-full text-sm font-medium transition ${
-                    currentPage === page
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
+                  className={`w-8 h-8 rounded-full text-sm font-medium transition ${currentPage === page
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                    }`}
                 >
                   {page}
                 </button>
@@ -369,6 +411,16 @@ export default function UsersPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
 
+              <input
+                type="text"
+                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition"
+                placeholder="Full name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+
+              {/* profile image removed from creation form; users set later */}
+
               {/* Mobile Field with Validation */}
               <div className="space-y-1">
                 <input
@@ -377,11 +429,10 @@ export default function UsersPage() {
                   pattern="[0-9]*"
                   maxLength={10}
                   required={!editId}
-                  className={`w-full px-5 py-4 bg-gray-50 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 transition ${
-                    isMobileInvalid
-                      ? "border-red-400 focus:border-red-400"
-                      : "border-gray-200 focus:border-purple-400"
-                  }`}
+                  className={`w-full px-5 py-4 bg-gray-50 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 transition ${isMobileInvalid
+                    ? "border-red-400 focus:border-red-400"
+                    : "border-gray-200 focus:border-purple-400"
+                    }`}
                   placeholder="Mobile number (10 digits)"
                   value={formData.mobile}
                   onChange={(e) => {
@@ -401,13 +452,15 @@ export default function UsersPage() {
                 )}
               </div>
 
-              <input
-                type="password"
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition"
-                placeholder="Password (leave blank to keep unchanged)"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+              {editId && (
+                <input
+                  type="password"
+                  className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition"
+                  placeholder="Password (leave blank to keep unchanged)"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              )}
 
               <select
                 required
@@ -429,6 +482,104 @@ export default function UsersPage() {
                   </option>
                 ))}
               </select>
+
+              {/* Role-specific fields */}
+              {roles.find((r) => r.id === formData.roleId)?.name === "doctor" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Specialization"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Qualification"
+                    value={formData.qualification}
+                    onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Experience (years)"
+                    value={formData.experience as any}
+                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.available}
+                      onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+                    />
+                    Available
+                  </label>
+                </>
+              )}
+
+              {roles.find((r) => r.id === formData.roleId)?.name === "health_advisor" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Specialization"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Qualification"
+                    value={formData.qualification}
+                    onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Experience (years)"
+                    value={formData.experience as any}
+                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.available}
+                      onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+                    />
+                    Available
+                  </label>
+                </>
+              )}
+
+              {roles.find((r) => r.id === formData.roleId)?.name === "patient" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Blood group (optional)"
+                    value={formData.bloodGroup}
+                    onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Age"
+                    value={formData.age as any}
+                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  />
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </>
+              )}
 
               <div className="flex justify-end gap-4 pt-4">
                 <button
