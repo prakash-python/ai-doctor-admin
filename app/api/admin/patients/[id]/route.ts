@@ -5,7 +5,7 @@ import { requireRole } from "@/app/lib/requireRole";
 
 export const GET = guard(async (_req: Request, ctx: any) => {
     await requireRole("admin");
-    const { id } = ctx.params as { id: string };
+    const { id } = await ctx.params;
 
     if (!id) return NextResponse.json({ message: "Missing id" }, { status: 400 });
 

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
-export default function AdvisorDetail({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default function AdvisorDetail() {
+    const { id } = useParams<{ id: string }>();
+    
     const [advisor, setAdvisor] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();

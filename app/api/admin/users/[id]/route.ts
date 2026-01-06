@@ -112,7 +112,7 @@ export const PUT = guard(async (req: Request, ctx: any) => {
 export const DELETE = guard(async (_req: Request, ctx: any) => {
   await requireRole("admin");
 
-  const { id } = ctx.params as { id: string };
+  const { id } = await ctx.params;
 
   if (!id)
     return NextResponse.json({ message: "Missing user id" }, { status: 400 });
